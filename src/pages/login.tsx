@@ -1,9 +1,12 @@
 import { gql, useMutation } from "@apollo/client";
 import React from "react";
+import { Helmet } from "react-helmet-async";
 import { useForm } from "react-hook-form";
 import { Link } from "react-router-dom";
+import { authTokenVar, isLoggedInVar } from "../apollo";
 import { Button } from "../components/button";
 import { FormError } from "../components/form-error";
+import { LOCALSTORAGE_TOKEN } from "../constants";
 import {
   loginMutation,
   loginMutationVariables,
@@ -31,13 +34,15 @@ function Login() {
     errors,
     handleSubmit,
     formState,
-  } = useForm<ILoginForm>({ mode: "onBlur" });
+  } = useForm<ILoginForm>({ mode: "onChange" });
   const onCompleted = (data: loginMutation) => {
     const {
       login: { error, ok, token },
     } = data;
-    if (ok) {
-      console.log(token);
+    if (ok && token) {
+      localStorage.setItem(LOCALSTORAGE_TOKEN, token);
+      authTokenVar(token);
+      isLoggedInVar(true);
     }
   };
   const [loginMutation, { data: loginMutationResult, loading }] = useMutation<
@@ -59,6 +64,9 @@ function Login() {
   };
   return (
     <div className="h-screen flex items-center justify-center bg-gray-800">
+      <Helmet>
+        <title>Login | Todo App</title>
+      </Helmet>
       <div className="bg-white w-full max-w-lg pt-10 pb-7 rounded-lg text-center">
         <h3 className="text-2xl text-gray-800">Todo App</h3>
         <form
@@ -66,7 +74,10 @@ function Login() {
           className="grid gap-3 mt-5 px-5 mb-3"
         >
           <input
-            ref={register({ required: "Email is required" })}
+            ref={register({
+              required: "Email is required",
+              pattern: /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+            })}
             required
             name="email"
             type="email"
@@ -75,6 +86,9 @@ function Login() {
           />
           {errors.email?.message && (
             <FormError errorMessage={errors.email?.message} />
+          )}
+          {errors.email?.type === "pattern" && (
+            <FormError errorMessage={"Please enter a vaild email"} />
           )}
           <input
             ref={register({ required: "Password is required", minLength: 6 })}
